@@ -336,6 +336,7 @@ struct IDLOptions {
   bool strict_json;
   bool skip_js_exports;
   bool output_default_scalars_in_json;
+  bool output_full_schema_in_json;
   int indent_step;
   bool output_enum_identifiers;
   bool prefixed_enums;
@@ -362,6 +363,7 @@ struct IDLOptions {
     : strict_json(false),
       skip_js_exports(false),
       output_default_scalars_in_json(false),
+      output_full_schema_in_json(false),
       indent_step(2),
       output_enum_identifiers(true), prefixed_enums(true), scoped_enums(false),
       include_dependence_headers(true),

@@ -24,7 +24,7 @@ namespace flatbuffers {
 
 static bool GenStruct(const StructDef &struct_def, const Table *table,
                       int indent, const IDLOptions &opts,
-                      std::string *_text);
+                      std::string *_text, bool ignore_fixed=false);
 
 // If indentation is less than 0, that indicates we don't want any newlines
 // either.
@@ -254,9 +254,12 @@ static bool GenFieldOffset(const FieldDef &fd, const Table *table, bool fixed,
 
 // Generate text for a struct or table, values separated by commas, indented,
 // and bracketed by "{}"
+// ignore_fixed is used to ignore the struct_def.fixed flag when
+//   determining if the field is present. This is used for a struct
+//   with a nested struct. 
 static bool GenStruct(const StructDef &struct_def, const Table *table,
                       int indent, const IDLOptions &opts,
-                      std::string *_text) {
+                      std::string *_text, bool ignore_fixed) {
   std::string &text = *_text;
   text += "{";
   int fieldout = 0;
@@ -265,9 +268,10 @@ static bool GenStruct(const StructDef &struct_def, const Table *table,
        it != struct_def.fields.vec.end();
        ++it) {
     FieldDef &fd = **it;
-    auto is_present = struct_def.fixed || table->CheckField(fd.value.offset);
-    auto output_anyway = opts.output_default_scalars_in_json &&
-                         IsScalar(fd.value.type.base_type) &&
+    auto is_present = (!ignore_fixed &&struct_def.fixed) || table->CheckField(fd.value.offset);
+    auto output_anyway = ( opts.output_full_schema_in_json ||
+                          (opts.output_default_scalars_in_json &&
+                          IsScalar(fd.value.type.base_type)) ) &&
                          !fd.deprecated;
     if (is_present || output_anyway) {
       if (fieldout++) {
@@ -309,8 +313,126 @@ static bool GenStruct(const StructDef &struct_def, const Table *table,
         }
       }
       else
+      // Field is not present, but scalars we can just output
+      if (IsScalar(fd.value.type.base_type))
       {
         text += fd.value.constant;
+      }
+      // Outputting the full schema => handle a non-present non-scalar field 
+      else
+      {
+        switch (fd.value.type.base_type)
+        {
+          case BASE_TYPE_STRUCT:
+          {
+            // Handle a fixed struct
+            if (fd.value.type.struct_def->fixed)
+            {
+              text += "{";
+              for (auto v : fd.value.type.struct_def->fields.vec)
+              {
+                text += NewLine(opts);
+                text.append(indent+2*Indent(opts), ' ');
+                OutputIdentifier(v->name, opts, _text);
+                text += ": ";
+                // Check for nested struct
+                if (v->value.type.struct_def)
+                {
+                  // set ignore_fixed = true since the struct is fixed,
+                  // but the values are not present
+                  if (!GenStruct(*v->value.type.struct_def, table,
+                                 indent+2*Indent(opts), opts, &text, true))
+                  {
+                    return false;
+                  }
+                }
+                // Not a nested struct => add the value
+                else
+                {
+                  text += v->value.constant;
+                }
+                text += ",";
+              }
+              // Replace final comma with closing brace
+              text.pop_back();
+              text += NewLine(opts);
+              text.append(indent+Indent(opts), ' ');
+              text += '}';
+            }
+            // Handle a table
+            else
+            if (!GenStruct(*fd.value.type.struct_def, table,
+                           indent+Indent(opts), opts, &text))
+            {
+              return false;
+            }
+            break;
+          }
+          case BASE_TYPE_STRING:
+          {
+            text += "\"\"";
+            break;
+          }
+          case BASE_TYPE_UNION:
+          {
+            text += "{";
+            // Print a structure for each table in the union
+            for (auto v : fd.value.type.enum_def->vals.vec)
+            {
+              if (v->struct_def)
+              {
+                text += NewLine(opts);
+                text.append(indent+Indent(opts), ' ');
+                OutputIdentifier(v->name, opts, _text);
+                text += ": ";
+                if (!GenStruct(*v->struct_def, table,
+                               indent+2*Indent(opts), opts, &text))
+                {
+                  return false;
+                }
+                text += NewLine(opts);
+                text.append(indent+Indent(opts), ' ');
+                text += ",";
+              }
+            }
+            // Replace final comma with closing brace
+            text[text.size()-1] = '}';
+            break;
+          }
+          case BASE_TYPE_VECTOR:
+          {
+            if (IsScalar(fd.value.type.element))
+            {
+              text += "[ "+fd.value.constant+" ]";
+            }
+            else
+            if (fd.value.type.element == BASE_TYPE_STRING)
+            {
+              text += "[ \"\" ]";
+            }
+            // Print thestructure inside an array
+            else
+            {
+              text += "[";
+              text += NewLine(opts);
+              text.append(indent+2*Indent(opts), ' ');
+              if (!GenStruct(*fd.value.type.struct_def, table,
+                             indent+2*Indent(opts), opts, &text))
+              {
+                return false;
+              }
+              text += NewLine(opts);
+              text.append(indent+Indent(opts), ' ');
+              text += "]";
+            }
+            break;
+          }
+          // Should never reach this
+          default:
+          {
+            return false;
+          }
+        }
       }
     }
   }

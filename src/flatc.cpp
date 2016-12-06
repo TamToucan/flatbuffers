@@ -119,6 +119,7 @@ static void Error(const std::string &err, bool usage, bool show_exe_name) {
       "                     non-UTF-8 input.)\n"
       "  --defaults-json    Output fields whose value is the default when\n"
       "                     writing JSON\n"
+      "  --full-schema-json Output all fields in schema when writing JSON\n"
       "  --unknown-json     Allow fields in JSON that are not defined in the\n"
       "                     schema. These fields will be discared when generating\n"
       "                     binaries.\n"
@@ -209,6 +210,8 @@ int main(int argc, const char *argv[]) {
         opts.skip_js_exports = true;
       } else if(arg == "--defaults-json") {
         opts.output_default_scalars_in_json = true;
+      } else if(arg == "--full-schema-json") {
+        opts.output_full_schema_in_json = true;
       } else if (arg == "--unknown-json") {
         opts.skip_unexpected_fields_in_json = true;
       } else if(arg == "--no-prefix") {
