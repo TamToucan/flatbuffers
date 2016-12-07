@@ -22,7 +22,7 @@
 
 namespace flatbuffers {
 
-static bool GenStruct(const StructDef &struct_def, const Table *table,
+static bool GenStruct(StructDef &struct_def, const Table *table,
                       int indent, const IDLOptions &opts,
                       std::string *_text, bool ignore_fixed=false);
 
@@ -257,13 +257,26 @@ static bool GenFieldOffset(const FieldDef &fd, const Table *table, bool fixed,
 // ignore_fixed is used to ignore the struct_def.fixed flag when
 //   determining if the field is present. This is used for a struct
 //   with a nested struct. 
-static bool GenStruct(const StructDef &struct_def, const Table *table,
+static bool GenStruct(StructDef &struct_def, const Table *table,
                       int indent, const IDLOptions &opts,
                       std::string *_text, bool ignore_fixed) {
   std::string &text = *_text;
   text += "{";
   int fieldout = 0;
   StructDef *union_sd = nullptr;
+
+  if (struct_def.generating_text)
+  {
+    text += NewLine(opts);
+    text.append(indent, ' ');
+    text += "\"NESTED->"+struct_def.name+"\"";
+    text += NewLine(opts);
+    text.append(indent, ' ');
+    text += "}";
+    return true;
+  }
+
+  struct_def.generating_text = true;
   for (auto it = struct_def.fields.vec.begin();
        it != struct_def.fields.vec.end();
        ++it) {
@@ -436,6 +449,8 @@ static bool GenStruct(const StructDef &struct_def, const Table *table,
       }
     }
   }
+  struct_def.generating_text = false;
+
   text += NewLine(opts);
   text.append(indent, ' ');
   text += "}";

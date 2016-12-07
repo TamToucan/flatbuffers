@@ -1,0 +1,81 @@
+namespace Test;
+
+table ATable {
+    number1:int = 42;
+    str:string;
+    str2:string;
+}
+
+table T1 {
+    t1_num:int = 1;
+}
+
+table T2 {
+    t2_str:string;
+}
+
+table T3 {
+    t3_int:int;
+    t3_str:string;
+}
+
+union AUnion { T1, T2, T3 }
+
+table UnionTable {
+    theunion:AUnion;
+}
+
+struct AStruct {
+    x:int = 1;
+    y:int = 2;
+    z:int = 3;
+}
+
+struct ANestedStruct {
+    nested1:AStruct;
+    f:float;
+    nested2:AStruct;
+}
+
+struct Recursive {
+    field1: int;
+    repeat:Recursive;
+}
+struct Deep1 {
+    d1_f1:int;
+}
+struct Deep2 {
+    d2_r1:Deep1;
+    d2_r2:Deep2;
+}
+struct Deep3 {
+    d3_r2:Deep2;
+    d3_r3:Deep3;
+}
+struct Deep4 {
+    d4_f1:int;
+    d4_r1:Deep1;
+    d4_r2:Deep2;
+    d4_r3:Deep3;
+    d4_r4:Deep3;
+}
+
+table Game {
+    BASE_SCREEN_WIDTH        :int = 640;
+    flag:bool = true;
+    atable:ATable;
+    aunion:AUnion;
+    intvec:[int];
+    strvec:[string];
+    astruct:AStruct;
+    nestedstruct:ANestedStruct;
+    unionvec:[UnionTable];
+    recurse:Recursive;
+    deep1:Deep1;
+    deep2:Deep2;
+    deep3:Deep3;
+    deep4:Deep4;
+}
+
+root_type Game;
+

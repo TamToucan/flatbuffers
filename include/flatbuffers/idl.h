@@ -203,7 +203,8 @@ struct Namespace {
 
 // Base class for all definition types (fields, structs_, enums_).
 struct Definition {
-  Definition() : generated(false), defined_namespace(nullptr),
+  Definition() : generated(false), generating_text(false),
+                 defined_namespace(nullptr),
                  serialized_location(0), index(-1) {}
 
   flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<
@@ -216,6 +217,7 @@ struct Definition {
   std::vector<std::string> doc_comment;
   SymbolTable<Value> attributes;
   bool generated;  // did we already output code for this definition?
+  bool generating_text;  // are we currently generating text for this?
   Namespace *defined_namespace;  // Where it was defined.
 
   // For use with Serialize()
